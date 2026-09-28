@@ -182,9 +182,11 @@ export type OrderByOf<C extends CollectionMeta> = {
 // Capture the query literal as W and re-implement every check by hand.
 // ---------------------------------------------------------------------------
 type ValidateFilter<F, Allowed> = { [Op in keyof F]: Op extends keyof Allowed ? Allowed[Op] : never };
+// A filter may be `undefined` ("no filter here"): the runtime drops it (`compactWhere`), so the type
+// keeps whatever `undefined` the query put there.
 export type ValidateWhere<W, C extends CollectionMeta> = {
   [K in keyof W]: K extends keyof C["fields"]
-    ? ValidateFilter<NonNullable<W[K]>, FilterFor<C["fields"][K]>>
+    ? ValidateFilter<NonNullable<W[K]>, FilterFor<C["fields"][K]>> | Extract<W[K], undefined>
     : never;
 };
 
@@ -219,7 +221,11 @@ type AnyPrunes<W, C extends CollectionMeta> = true extends {
 }[keyof W]
   ? true
   : false;
-export type RiderGuard<W, C extends CollectionMeta> = [keyof W] extends [never]
+/** The keys of `W` whose filter isn't always `undefined`: a filter that is only ever `undefined` is no filter. */
+type DefinedKeys<W> = { [K in keyof W]-?: [W[K]] extends [undefined] ? never : K }[keyof W];
+// A filter that may be `undefined` counts by its defined branch, like an operator whose value may be
+// `undefined`: the types see the key, and the runtime rule (`wherePrunes`, NEEDS_PRUNING) sees the value.
+export type RiderGuard<W, C extends CollectionMeta> = [DefinedKeys<W>] extends [never]
   ? {}
   : AnyPrunes<W, C> extends true
     ? {}
@@ -447,7 +453,7 @@ export interface FindManyResult<Rec> {
    * decided without them), no `limit`, or a block walk that ran out of candidates before it filled the
    * page. Absent when the walk stopped early, which is exactly when the engine has NOT seen the tail.
    *
-   * Prefer this over `count()` whenever it is present: `count()` is a zero-fetch upper bound that can
+   * Prefer this over `count()` whenever it is present: `count()` is an upper bound, read without any data file, that can
    * be an order of magnitude high, while this is the truth. It is not `offset + records.length` — on a
    * page past the end that formula returns the offset, not the total.
    */
@@ -475,7 +481,8 @@ export interface CountOptions extends QueryOptions {
 interface CollectionBase<C extends CollectionMeta, Rec> {
   findMany<W extends WhereOf<C>>(args?: FindManyArgs<C, W>): Promise<FindManyResult<Rec>>;
   findMany<W extends WhereOf<C>>(args: BlockOrderScanArgs<C, W>): Promise<FindManyResult<Rec>>;
-  // No RiderGuard here, deliberately: count reads only the manifest, so a
+  // No RiderGuard here, deliberately: count reads the manifest and, for indexed
+  // filters, index chunks and zonemap sidecars, but never a data file. A
   // rider-only where just widens the upper bound (ADR-0008 §3) — count never
   // downloads the dataset, so the rider rule has nothing to guard (ADR-0013).
   count<W extends WhereOf<C>>(where?: W & ValidateWhere<W, C>, opts?: CountOptions): Promise<CountResult>;

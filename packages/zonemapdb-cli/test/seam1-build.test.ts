@@ -571,6 +571,20 @@ async function check() {
   await db.flags.findMany({ where: { even: { equals: true } }, scan: "block-order", limit: 20 });
   // @ts-expect-error — a scan without a limit can't stop early
   await db.flags.findMany({ where: { even: { equals: true } }, scan: "block-order" });
+
+  // A filter set to undefined is no filter, in findMany and count alike.
+  const chosen = Math.random() > 0.5 ? true : undefined;
+  await db.flags.findMany({ where: { id: { lt: 50 }, even: chosen === undefined ? undefined : { equals: chosen } } });
+  await db.flags.findMany({ where: { id: { lt: 50 }, even: undefined } });
+  await db.flags.count({ even: chosen === undefined ? undefined : { equals: chosen } });
+  // A where of only undefined filters is the empty where, which is allowed.
+  await db.flags.findMany({ where: { even: undefined }, limit: 20 });
+  // @ts-expect-error — undefined doesn't make a rider prune
+  await db.flags.findMany({ where: { id: undefined, even: { equals: true } } });
+  // @ts-expect-error — an unknown field is still rejected when undefined
+  await db.flags.findMany({ where: { id: { lt: 50 }, nope: undefined } });
+  // @ts-expect-error — so is a bad operator next to undefined
+  await db.flags.findMany({ where: { id: { lt: 50 }, even: Math.random() > 0.5 ? undefined : { gt: true } } });
 }
 void check;
 `,
