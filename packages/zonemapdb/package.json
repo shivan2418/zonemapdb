@@ -1,6 +1,6 @@
 {
   "name": "zonemapdb",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "Query large static datasets from any static host — partitioned into many small files, typed client, no WASM, no HTTP Range.",
   "type": "module",
   "license": "MIT",

@@ -1,6 +1,6 @@
 {
   "name": "zonemapdb-cli",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "Build tool for zonemapdb: infer → partition → index → codegen + config wizard.",
   "type": "module",
   "license": "MIT",
