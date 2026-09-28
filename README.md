@@ -28,6 +28,11 @@ Every operator, sorting, pagination, counting and what each query costs: see the
 
 Two complete, working example apps — a movie catalog and a product lookup, each building → deploying → querying in a real browser — live in [`examples/`](https://github.com/shivan2418/zonemapdb/tree/master/examples).
 
+Two live demos run on GitHub Pages with real datasets:
+
+- **[Card search](https://shivan2418.github.io/blockdb-demo-scryfall/)** ([source](https://github.com/shivan2418/blockdb-demo-scryfall)): about 116,000 Magic: The Gathering cards, with name search, filters and sorting.
+- **[Address lookup](https://shivan2418.github.io/zonemapdb-demo-addresses/)** ([source](https://github.com/shivan2418/zonemapdb-demo-addresses)): about 160 million US addresses in 817 MB of compressed files. Looking up one address transfers about 0.17 MB.
+
 ## Why zonemapdb?
 
 The problem — *query a big dataset in the browser, with no database server and no backend, served from plain static hosting* — is well-trodden. Almost every existing tool solves it the **opposite way** from zonemapdb: keep **one big file** and read byte-slices of it with **HTTP Range requests** inside a **WebAssembly engine**.
