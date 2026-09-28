@@ -17,7 +17,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Tag matches package versions
         run: |
-          for pkg in blockdb blockdb-cli; do
+          for pkg in zonedb zonedb-cli; do
             version=$(node -p "require('./packages/$pkg/package.json').version")
             if [ "v$version" != "$GITHUB_REF_NAME" ]; then
               echo "::error::$pkg is $version but the tag is $GITHUB_REF_NAME"
@@ -32,11 +32,11 @@ jobs:
       - name: Pack tarballs
         run: |
           mkdir release
-          pnpm --filter blockdb --filter blockdb-cli exec pnpm pack --pack-destination "$GITHUB_WORKSPACE/release"
+          pnpm --filter zonedb --filter zonedb-cli exec pnpm pack --pack-destination "$GITHUB_WORKSPACE/release"
           ls -l release
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          notes=$(awk -v v="${GITHUB_REF_NAME#v}" '$0 == "## " v {on=1; next} /^## / {on=0} on' packages/blockdb/CHANGELOG.md)
+          notes=$(awk -v v="${GITHUB_REF_NAME#v}" '$0 == "## " v {on=1; next} /^## / {on=0} on' packages/zonedb/CHANGELOG.md)
           gh release create "$GITHUB_REF_NAME" release/*.tgz --title "$GITHUB_REF_NAME" --notes "$notes"

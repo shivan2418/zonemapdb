@@ -1,4 +1,4 @@
-import { connect } from "./blockdb/client.js";
+import { connect } from "./zonedb/client.js";
 
 const db = connect();
 

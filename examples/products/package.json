@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "description": "blockdb example: a product lookup (CSV input, user PK + get(id), boolean equals, absent/isNull).",
+  "description": "zonedb example: a product lookup (CSV input, user PK + get(id), boolean equals, absent/isNull).",
   "scripts": {
     "generate-data": "node scripts/generate-data.mjs",
     "build-data": "node scripts/build-data.mjs",
@@ -14,10 +14,10 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "blockdb": "workspace:*"
+    "zonedb": "workspace:*"
   },
   "devDependencies": {
-    "blockdb-cli": "workspace:*",
+    "zonedb-cli": "workspace:*",
     "@types/node": "^20.19.0",
     "typescript": "^7.0.0",
     "vite": "^8.1.0",

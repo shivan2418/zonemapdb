@@ -1,6 +1,6 @@
-# Querying blockdb
+# Querying zonedb
 
-A complete guide to the query API: every operator, what each method returns, and what a query costs. For setup, see the [README](../README.md). For how the build decides what's queryable, see the [blockdb-cli README](../packages/blockdb-cli/README.md).
+A complete guide to the query API: every operator, what each method returns, and what a query costs. For setup, see the [README](../README.md). For how the build decides what's queryable, see the [zonedb-cli README](../packages/zonedb-cli/README.md).
 
 - [The example dataset](#the-example-dataset)
 - [Connecting](#connecting)
@@ -55,19 +55,19 @@ Every example below queries one collection, `books`, built from records like thi
 }
 ```
 
-`blockdb init` infers almost all of this from the data; you pick the sort field, the primary key and which filters need to be fast (the indexed fields). `inStock` isn't indexed: it can still be filtered, as a [rider](#riders-filters-that-dont-narrow-the-read).
+`zonedb init` infers almost all of this from the data; you pick the sort field, the primary key and which filters need to be fast (the indexed fields). `inStock` isn't indexed: it can still be filtered, as a [rider](#riders-filters-that-dont-narrow-the-read).
 
 ## Connecting
 
-`blockdb build` generates `src/blockdb/client.ts`. Import `connect` from it:
+`zonedb build` generates `src/zonedb/client.ts`. Import `connect` from it:
 
 ```ts
-import { connect } from "./blockdb/client";
+import { connect } from "./zonedb/client";
 
 const db = connect();
 ```
 
-With no arguments it fetches from the `basePath` baked in at build time (default `/blockdb`). Every option can be overridden:
+With no arguments it fetches from the `basePath` baked in at build time (default `/zonedb`). Every option can be overridden:
 
 ```ts
 const db = connect({
@@ -121,7 +121,7 @@ await db.books.findMany({
 });
 ```
 
-A `where` made only of riders would have to download every file, so it's rejected. With the generated types that's a compile error. For a `where` built at runtime, such as from UI input, it's a `BlockDbError` with code `NEEDS_PRUNING`, whose message names the fields that can prune. `count` accepts riders on their own, because it never downloads data.
+A `where` made only of riders would have to download every file, so it's rejected. With the generated types that's a compile error. For a `where` built at runtime, such as from UI input, it's a `ZoneDbError` with code `NEEDS_PRUNING`, whose message names the fields that can prune. `count` accepts riders on their own, because it never downloads data.
 
 ```ts
 await db.books.findMany({ where: { inStock: { equals: true } } }); // ✗ only a rider
@@ -131,7 +131,7 @@ await db.books.count({ inStock: { equals: true } });               // ✓ an upp
 **Checking a `where` built from UI input.** The compiler can't see the rules that depend on a value. `contains` prunes only with **3 or more characters**, because a shorter needle has no trigram to look up. An empty `startsWith` or `endsWith`, an empty `hasEvery` and `isEmpty: false` match every block, so they ride too. So `{ title_fold: { contains: "ab" } }` or `{ tags: { hasEvery: [] } }` (no chip selected) type-checks, then throws `NEEDS_PRUNING` at runtime if nothing else in the `where` prunes. To fall back instead of catching the error, ask `wherePrunes` first. It applies exactly the rule `findMany` enforces, against the schema you pass. `findMany` checks against the deployed manifest's schema, so the two agree as long as the bundled client and the deploy come from the same build:
 
 ```ts
-import { normalize, wherePrunes } from "blockdb";
+import { normalize, wherePrunes } from "zonedb";
 
 const where = { title_fold: { contains: normalize("fold", userInput) ?? "" } };
 const { records } = wherePrunes(where, db.books.getSchema())
@@ -156,7 +156,7 @@ const { records, hasMore } = await db.books.findMany({
 
 A scan needs a `limit`, and it can't have an `orderBy` on any field but the sort field. Without those it couldn't stop early, so the compiler rejects a missing `limit`, and the runtime rejects the ordering with `NEEDS_PRUNING`. The cost depends on the data. A rider most records match fills the page from the first file or two. One that few records match can read most of the dataset before the page fills, or before it runs out. So use a scan where either outcome is acceptable, like a browse view, and keep a pruning filter wherever you have one. There's no need for a fake range such as `{ title: { gte: "" } }` to get past the rider check; that costs the same and hides the intent.
 
-**When to index a field.** Index it when a filter on it should narrow the read by itself. Leave it unindexed when it's only ever combined with a more selective filter, or when its values are spread across every file anyway: a boolean, or a house number in an address list sorted by street. `blockdb build` warns about an index whose average value appears in most files, because that index costs build output and saves nothing.
+**When to index a field.** Index it when a filter on it should narrow the read by itself. Leave it unindexed when it's only ever combined with a more selective filter, or when its values are spread across every file anyway: a boolean, or a house number in an address list sorted by street. `zonedb build` warns about an index whose average value appears in most files, because that index costs build output and saves nothing.
 
 ## Which operators a field gets
 
@@ -196,7 +196,7 @@ await db.books.findMany({ where: { author: { endsWith: "Walsh" } } });
 await db.books.findMany({ where: { title_fold: { contains: "atlas" } } });
 ```
 
-`blockdb build` warns when one of these indexes barely prunes, which is typical of identifiers and near-constant fields.
+`zonedb build` warns when one of these indexes barely prunes, which is typical of identifiers and near-constant fields.
 
 **Value unions.** When a string field has few distinct values, `init` records them in `values`. Codegen then narrows `equals`, `in`, `some` and `hasEvery` to that union, so `language: { equals: "xx" }` is a compile error and your editor autocompletes the valid values. `startsWith`, `endsWith` and `contains` stay plain `string`, because a fragment of a value isn't itself a value. The union is exported by name (`BooksLanguage` here), which is handy for building a picker. Delete `values` from the config to widen the field back to `string`.
 
@@ -205,7 +205,7 @@ await db.books.findMany({ where: { title_fold: { contains: "atlas" } } });
 Matching is exact, so `contains: "cafe"` won't find "Café". Fix it at build time: derive a folded copy of the field (`"derive": { "from": "title", "using": "fold" }`, see the config above), then fold the user's input the same way before querying:
 
 ```ts
-import { normalize } from "blockdb";
+import { normalize } from "zonedb";
 
 const q = normalize("fold", userInput) ?? "";
 await db.books.findMany({ where: { title_fold: { contains: q } } }); // "cafe" finds "Café Atlas"
@@ -238,7 +238,7 @@ await db.books.findMany({ where: { language: { equals: "de" }, inStock: { equals
 
 ## Missing values: null and absent
 
-blockdb distinguishes a field that is `null` from one that is missing from the record ("absent"), and the config records which of the two each field can be. `init` detects both from the data:
+zonedb distinguishes a field that is `null` from one that is missing from the record ("absent"), and the config records which of the two each field can be. `init` detects both from the data:
 
 - `"nullable": true`: some records hold `null`. The generated type is `T | null`, and the field gets `isNull` and `exists`.
 - `"absent": true`: some records lack the key. The generated type is optional (`field?: T`), and the field gets `isAbsent` and `exists`.
@@ -255,7 +255,7 @@ await db.books.findMany({ where: { ...fr, rating: { exists: false } } });  // nu
 
 A missing value never matches a comparison: `rating: { gt: 4.5 }`, `rating: { equals: 5 }` and `rating: { not: 5 }` all skip records whose rating is null or absent.
 
-The flags keep the generated types honest, so `build` enforces them: if your data gains a `null` or loses a key where the config doesn't allow it, the build fails and says which flag to add (or run `blockdb init --reinfer`). The operators are offered on every field except the sort field and list fields, whose missing values have their own rules; the flags shape the record type on every field.
+The flags keep the generated types honest, so `build` enforces them: if your data gains a `null` or loses a key where the config doesn't allow it, the build fails and says which flag to add (or run `zonedb init --reinfer`). The operators are offered on every field except the sort field and list fields, whose missing values have their own rules; the flags shape the record type on every field.
 
 ## `not`
 
@@ -321,7 +321,7 @@ await db.books.findMany({
 
 Without `orderBy`, results come in sort-field order.
 
-**Sorting by the sort field is cheap; sorting by anything else reads every candidate.** Data is stored in sort-field order, so a page sorted by the sort field is read from the first few files and the walk stops. To sort by `rating`, blockdb must first read every record the `where` selects, so narrow the `where` before sorting large collections by another field.
+**Sorting by the sort field is cheap; sorting by anything else reads every candidate.** Data is stored in sort-field order, so a page sorted by the sort field is read from the first few files and the walk stops. To sort by `rating`, zonedb must first read every record the `where` selects, so narrow the `where` before sorting large collections by another field.
 
 Missing values sort first in ascending order and last in descending order.
 
@@ -336,7 +336,7 @@ const page = await db.books.findMany({
   offset: 40, // the third page
 });
 page.hasMore; // true if there's a fourth page
-page.total;   // the exact match count, when blockdb had to see every match anyway
+page.total;   // the exact match count, when zonedb had to see every match anyway
 ```
 
 `total` is present only when answering the query already meant seeing every match: an `orderBy` on a field other than the sort field, no `limit`, or a page at or past the end. It's the true count, so prefer it over `count()` when it's there.
@@ -367,7 +367,7 @@ It's a compile error on a collection without a primary key.
 
 ## Cancelling a query
 
-`findMany`, `count` and `get` take an optional `signal`, the standard `AbortSignal`. When it fires, the query's pending fetches are cancelled and the call rejects with `BlockDbError` code `ABORTED`. This suits search-as-you-type, where each keystroke supersedes the last query:
+`findMany`, `count` and `get` take an optional `signal`, the standard `AbortSignal`. When it fires, the query's pending fetches are cancelled and the call rejects with `ZoneDbError` code `ABORTED`. This suits search-as-you-type, where each keystroke supersedes the last query:
 
 ```ts
 let search: AbortController | undefined;
@@ -383,7 +383,7 @@ async function onInput(term: string) {
     });
     return records;
   } catch (e) {
-    if (e instanceof BlockDbError && e.code === "ABORTED") return undefined; // superseded
+    if (e instanceof ZoneDbError && e.code === "ABORTED") return undefined; // superseded
     throw e;
   }
 }
@@ -399,11 +399,11 @@ A query parses every data file it downloads, and a block is often a few megabyte
 
 ```ts
 // search.worker.ts
-import { BlockDbError } from "blockdb";
-import { connect } from "./blockdb/client";
+import { ZoneDbError } from "zonedb";
+import { connect } from "./zonedb/client";
 
 // A relative basePath resolves against the worker script's URL, not the page's: pass an absolute one.
-const db = connect({ basePath: new URL("/blockdb", self.location.origin).href });
+const db = connect({ basePath: new URL("/zonedb", self.location.origin).href });
 
 let search: AbortController | undefined;
 
@@ -418,7 +418,7 @@ self.onmessage = async (e: MessageEvent<{ term: string }>) => {
     });
     self.postMessage({ term: e.data.term, records });
   } catch (err) {
-    if (err instanceof BlockDbError && err.code === "ABORTED") return;
+    if (err instanceof ZoneDbError && err.code === "ABORTED") return;
     self.postMessage({ term: e.data.term, error: String(err) });
   }
 };
@@ -428,7 +428,7 @@ On the page, create it with `new Worker(new URL("./search.worker.ts", import.met
 
 ## What a query costs
 
-Every query first loads the manifest (once per client, revalidated with the host via `cache: "no-cache"`). The manifest records each file's value ranges, so the sort field and number/date ranges can rule out files without fetching anything else. Other operators may fetch small index chunks (about 45 KB each) to find which files contain a value. blockdb then fetches the remaining data files.
+Every query first loads the manifest (once per client, revalidated with the host via `cache: "no-cache"`). The manifest records each file's value ranges, so the sort field and number/date ranges can rule out files without fetching anything else. Other operators may fetch small index chunks (about 45 KB each) to find which files contain a value. zonedb then fetches the remaining data files.
 
 Files fetched per query (after the manifest) on a build of 4,000 books in 47 data files:
 
@@ -448,19 +448,19 @@ How to keep queries cheap:
 - **Always pass `limit`** unless you need every match.
 - **Pair broad operators with a selective one.** `every`, the fragment operators and every rider get cheaper when another field narrows the candidates.
 - **Don't index what can't prune.** A filter on an unindexed field still works as a rider. Heed the build's "barely prunes" warnings.
-- **Inspect before deploying.** `blockdb inspect` reports sizes and warnings without rebuilding.
+- **Inspect before deploying.** `zonedb inspect` reports sizes and warnings without rebuilding.
 
 ## Errors
 
-The runtime throws one error class, `BlockDbError`, with a `code` to switch on:
+The runtime throws one error class, `ZoneDbError`, with a `code` to switch on:
 
 ```ts
-import { BlockDbError } from "blockdb";
+import { ZoneDbError } from "zonedb";
 
 try {
   await db.books.findMany({ where: { language: { equals: "de" } } });
 } catch (e) {
-  if (e instanceof BlockDbError && e.code === "NETWORK") {
+  if (e instanceof ZoneDbError && e.code === "NETWORK") {
     // worth retrying
   }
 }
@@ -477,7 +477,7 @@ try {
 | `NEEDS_PRUNING` | Every filter in the `where` is a [rider](#riders-filters-that-dont-narrow-the-read), so the query would read the whole dataset. Add a filter that prunes. | No |
 | `ABORTED` | The query's `signal` fired (see [Cancelling a query](#cancelling-a-query)). Not a failure: usually a newer query superseded it. | No, ignore it |
 
-Errors carry `e.url` (the file being fetched) where relevant. They never include your `where`, so filter values don't end up in logs. There's no built-in retry for network errors: wrap `fetch` instead, as the [deploy guide](deploy-guide.md) shows. The one thing blockdb retries is a stale manifest: if a file the manifest names returns 404, it refetches the manifest with `cache: "reload"`, and if the new manifest no longer names that file, it reruns the query once against it. This covers a browser that kept the previous deploy's manifest after a redeploy.
+Errors carry `e.url` (the file being fetched) where relevant. They never include your `where`, so filter values don't end up in logs. There's no built-in retry for network errors: wrap `fetch` instead, as the [deploy guide](deploy-guide.md) shows. The one thing zonedb retries is a stale manifest: if a file the manifest names returns 404, it refetches the manifest with `cache: "reload"`, and if the new manifest no longer names that file, it reruns the query once against it. This covers a browser that kept the previous deploy's manifest after a redeploy.
 
 ## What the compiler catches
 

@@ -1,24 +1,24 @@
-# blockdb
+# zonedb
 
-> Query large datasets from any static host: no backend, no WASM, no HTTP Range requests. blockdb splits a large dataset into many small whole files at build time, builds indexes over them, and generates a typed TypeScript client that fetches only the files a query needs. Because it fetches whole small files (not byte ranges of one big file), it works on any dumb static host and every block is a plain, compressible, cacheable CDN object.
+> Query large datasets from any static host: no backend, no WASM, no HTTP Range requests. zonedb splits a large dataset into many small whole files at build time, builds indexes over them, and generates a typed TypeScript client that fetches only the files a query needs. Because it fetches whole small files (not byte ranges of one big file), it works on any dumb static host and every block is a plain, compressible, cacheable CDN object.
 
 Key facts an implementer needs up front:
 
-- Two packages, lockstep-versioned, neither with any runtime dependency: **`blockdb`** (browser runtime, ESM-only, production dependency) and **`blockdb-cli`** (Node build tool, devDependency, `bin` named `blockdb`).
-- Install with pnpm: `pnpm add blockdb && pnpm add -D blockdb-cli`.
+- Two packages, lockstep-versioned, neither with any runtime dependency: **`zonedb`** (browser runtime, ESM-only, production dependency) and **`zonedb-cli`** (Node build tool, devDependency, `bin` named `zonedb`).
+- Install with pnpm: `pnpm add zonedb && pnpm add -D zonedb-cli`.
 - The query API is the generated typed client only — a Prisma-style `where` object, not SQL and not a chained builder.
-- Read-only from the browser: you update data by re-running `blockdb build` and redeploying. No cursors, no OR/AND/NOT in v1.0 (implicit-AND only).
+- Read-only from the browser: you update data by re-running `zonedb build` and redeploying. No cursors, no OR/AND/NOT in v1.0 (implicit-AND only).
 
 ## Quickstart
 
 ```bash
-pnpm add blockdb && pnpm add -D blockdb-cli
-npx blockdb init data/movies.ndjson   # guided wizard: reads your data, recommends what to index, writes blockdb.config.json
-npx blockdb build                     # → public/blockdb/ (deploy this) + src/blockdb/{schema,client}.ts (commit these)
+pnpm add zonedb && pnpm add -D zonedb-cli
+npx zonedb init data/movies.ndjson   # guided wizard: reads your data, recommends what to index, writes zonedb.config.json
+npx zonedb build                     # → public/zonedb/ (deploy this) + src/zonedb/{schema,client}.ts (commit these)
 ```
 
 ```ts
-import { connect } from './blockdb/client'
+import { connect } from './zonedb/client'
 
 const db = connect() // no args works for the standard deploy; connect({ basePath }) to override
 
@@ -39,19 +39,19 @@ const { records, hasMore } = await db.movies.findMany({
 
 ## Build & packaging (ADR-0005)
 
-- [Package & CLI public contract](https://github.com/shivan2418/blockdb/blob/master/docs/adr/0005-package-and-cli-contract.md): the two-package split, lockstep versioning, the `init`/`build`/`inspect` commands, flag-equivalence (`init --yes`), the committed `blockdb.config.json` (flags > config > inferred defaults), the two outputs, and the version compatibility handshake.
+- [Package & CLI public contract](https://github.com/shivan2418/blockdb/blob/master/docs/adr/0005-package-and-cli-contract.md): the two-package split, lockstep versioning, the `init`/`build`/`inspect` commands, flag-equivalence (`init --yes`), the committed `zonedb.config.json` (flags > config > inferred defaults), the two outputs, and the version compatibility handshake.
 - [Codegen & typed client](https://github.com/shivan2418/blockdb/blob/master/docs/adr/0004-codegen-and-typed-client.md): how the runtime and the generated per-dataset facade blend; what `createClient` / the generated `connect()` emit.
-- [Runtime failure contract](https://github.com/shivan2418/blockdb/blob/master/docs/adr/0007-runtime-failure-contract.md): `BlockDbError` / `BlockDbErrorCode`, partial-failure semantics, the fail-loud major-version mismatch at `connect()`, and the one retry: a 404 on a file the manifest names refetches the manifest (`cache: "reload"`) and reruns the query once if the manifest changed, so a stale cached manifest after a redeploy recovers on its own.
+- [Runtime failure contract](https://github.com/shivan2418/blockdb/blob/master/docs/adr/0007-runtime-failure-contract.md): `ZoneDbError` / `ZoneDbErrorCode`, partial-failure semantics, the fail-loud major-version mismatch at `connect()`, and the one retry: a 404 on a file the manifest names refetches the manifest (`cache: "reload"`) and reruns the query once if the manifest changed, so a stale cached manifest after a redeploy recovers on its own.
 
 ## Data format
 
 - [Partitioning strategy](https://github.com/shivan2418/blockdb/blob/master/docs/adr/0002-sharding-strategy.md): why many small whole files instead of one range-read file; content-hashed NDJSON blocks.
 - [Index & manifest design](https://github.com/shivan2418/blockdb/blob/master/docs/adr/0003-index-and-manifest-design.md): `manifest.json` as the stable entry point, zonemap sidecars, lazy inverted-index chunks, `formatVersion`.
-- [Config JSON schema](https://github.com/shivan2418/blockdb/blob/master/packages/blockdb-cli/config.schema.json): the validated shape of `blockdb.config.json`.
+- [Config JSON schema](https://github.com/shivan2418/blockdb/blob/master/packages/zonedb-cli/config.schema.json): the validated shape of `zonedb.config.json`.
 
 ## Examples
 
-- [Movie catalog](https://github.com/shivan2418/blockdb/tree/master/examples/movies): a complete build → deploy → query-in-browser app; see `src/blockdb/` for the generated client and `src/main.ts` for real queries.
+- [Movie catalog](https://github.com/shivan2418/blockdb/tree/master/examples/movies): a complete build → deploy → query-in-browser app; see `src/zonedb/` for the generated client and `src/main.ts` for real queries.
 - [Product lookup](https://github.com/shivan2418/blockdb/tree/master/examples/products): a second dataset shape, same end-to-end flow.
 
 ## Optional

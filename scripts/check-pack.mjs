@@ -49,13 +49,13 @@ function assertNoRuntimeDeps(pkgDir, pkgName) {
   }
 }
 
-const runtimeDir = path.join(packagesDir, "blockdb");
-const cliDir = path.join(packagesDir, "blockdb-cli");
+const runtimeDir = path.join(packagesDir, "zonedb");
+const cliDir = path.join(packagesDir, "zonedb-cli");
 
-assertOnlyAllowed("blockdb", packFiles("blockdb", runtimeDir));
-assertNoRuntimeDeps(runtimeDir, "blockdb");
+assertOnlyAllowed("zonedb", packFiles("zonedb", runtimeDir));
+assertNoRuntimeDeps(runtimeDir, "zonedb");
 
-assertOnlyAllowed("blockdb-cli", packFiles("blockdb-cli", cliDir), ["config.schema.json"]);
+assertOnlyAllowed("zonedb-cli", packFiles("zonedb-cli", cliDir), ["config.schema.json"]);
 
 if (process.exitCode) {
   process.exit(process.exitCode);

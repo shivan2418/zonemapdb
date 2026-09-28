@@ -1,0 +1,371 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "zonedb config",
+  "description": "zonedb.config.json — written by `zonedb-cli init`, consumed by `zonedb-cli build`.",
+  "type": "object",
+  "required": [
+    "collection",
+    "input",
+    "schema"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Editor autocomplete/validation reference to this file."
+    },
+    "formatVersion": {
+      "type": "integer",
+      "description": "The zonedb-cli major version this config's baked schema was inferred against."
+    },
+    "collection": {
+      "type": "string",
+      "description": "Name the generated collection is exposed under, e.g. `db.movies`."
+    },
+    "input": {
+      "type": "object",
+      "required": [
+        "path"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "A single file path, or a glob pattern matching same-format files to merge then block as one dataset."
+        },
+        "format": {
+          "enum": [
+            "ndjson",
+            "json",
+            "csv",
+            "tsv"
+          ],
+          "description": "Defaults to \"ndjson\"."
+        },
+        "delimiter": {
+          "type": "string",
+          "description": "Delimited (csv/tsv) column delimiter override. Default: \",\" for csv, \"\\t\" for tsv."
+        },
+        "records": {
+          "type": "string",
+          "description": "JSON only: dot-path to the array/map of records nested within the parsed document."
+        }
+      }
+    },
+    "output": {
+      "type": "string",
+      "description": "Served data tree. Default \"public/zonedb\"."
+    },
+    "clientOut": {
+      "type": "string",
+      "description": "Generated client dir. Default \"src/zonedb\"."
+    },
+    "basePath": {
+      "type": "string",
+      "description": "Baked default for the generated `connect()`. Default \"/zonedb\"."
+    },
+    "blockBytes": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Target compressed block size in bytes. Default 2 MiB."
+    },
+    "compression": {
+      "enum": [
+        "none",
+        "gzip",
+        "brotli"
+      ],
+      "description": "Pre-compress every served file (blocks, index chunks, zonemap sidecars, manifest) at build time, decompressed in the browser via the native DecompressionStream API — no library, no WASM. Default \"none\": prefer the host's Content-Encoding, which negotiates per client, whereas a pre-compressed file cannot fall back — a client lacking the format fails outright. Use this only when your host won't compress for you. \"brotli\" beats \"gzip\" by ~7% on a 45 KB index chunk and ~24% on a 1 MB block (its advantage grows with file size, and zonedb ships small files), at the same build cost, but has narrower client support."
+    },
+    "gzip": {
+      "type": "boolean",
+      "description": "DEPRECATED — use `compression: \"gzip\"`. Kept so existing configs keep working; setting both to conflicting values is an error."
+    },
+    "indexChunkBytes": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Target gzipped size per secondary-index chunk, in bytes. Default ~45 KB."
+    },
+    "schema": {
+      "type": "object",
+      "description": "The machine-owned baked schema block (written/refreshed by `init`/`init --reinfer`).",
+      "required": [
+        "sortField",
+        "fields"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "sortField": {
+          "type": "string",
+          "description": "Must name a \"number\", \"date\" or \"string\" field — the sole range-partitioned field. This choice decides which records are stored next to each other, so it is the single biggest lever on query cost: filters on this field read a few data files, filters on anything else may read most of them."
+        },
+        "pk": {
+          "type": "string",
+          "description": "Names a field as the user PK — unlocks the generated client's `get(id)`."
+        },
+        "fields": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/fieldConfig"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "fieldConfig": {
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "string",
+            "number",
+            "boolean",
+            "date",
+            "json"
+          ],
+          "description": "\"json\" is payload-only: carried in each record but never indexed or queryable."
+        },
+        "indexed": {
+          "type": "boolean",
+          "description": "Opt-in secondary index: builds a chunked inverted index + zonemap for this non-sort field."
+        },
+        "endsWith": {
+          "type": "boolean",
+          "description": "Opt-in reversed-value index — unlocks `endsWith`. Requires kind \"string\" and indexed: true."
+        },
+        "contains": {
+          "type": "boolean",
+          "description": "Opt-in trigram index — unlocks `contains`. Requires kind \"string\" and indexed: true."
+        },
+        "absent": {
+          "type": "boolean",
+          "description": "The key may be missing from a record (absent ≠ null). Types the field optional; on an indexed, single-valued, non-sort field it also unlocks isAbsent and exists. Inferred by init; build fails if a record lacks the key and this is not set."
+        },
+        "nullable": {
+          "type": "boolean",
+          "description": "The value may be null (null ≠ absent). Types the field `T | null`; on an indexed, single-valued, non-sort field it also unlocks isNull and exists. Inferred by init; build fails if a record holds null and this is not set."
+        },
+        "multi": {
+          "type": "boolean",
+          "description": "Scalar leaf under an object-array — record value is string[], matched existentially via `some`. Requires kind \"string\" and indexed: true."
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "uniqueItems": true,
+          "description": "The field's closed value set. Codegen exports it as a named union and narrows equals/in/some to it (fragment operators startsWith/contains/endsWith stay wide). Inferred for enum-like fields; delete it to widen the field back to plain string. Requires kind \"string\"."
+        },
+        "valuesType": {
+          "type": "string",
+          "description": "Name the value union so several fields share ONE emitted type instead of each getting a near-duplicate alias. Requires `values`. Any number of fields may declare the same name, and a config may declare many distinct names. Codegen cannot infer this — it can see that two value sets are equal today, not that they are the same concept — so `build` fails if fields sharing a name ever disagree on their values."
+        },
+        "tsType": {
+          "type": "string",
+          "description": "For \"json\" fields only: the TypeScript type codegen emits instead of `unknown`, as a type expression (e.g. \"ImageUris\", \"CardFace[]\", \"Record<string, string | null>\"). An UNCHECKED assertion — zonedb stores and returns the payload verbatim and never validates it against this type."
+        },
+        "tsImport": {
+          "type": "string",
+          "description": "A complete import statement emitted verbatim above the generated interface, for whatever `tsType` names (e.g. 'import type { ImageUris } from \"../types/scryfall.js\";'). Requires `tsType`. Identical statements across fields are emitted once."
+        },
+        "derive": {
+          "type": "object",
+          "description": "Compute this field at build time from another field instead of reading it from the input. The result is written into every record before partitioning, so it becomes an ORDINARY column — sortable, indexable, typed, with whatever operators its `kind` earns — while the source field is left untouched. Use it to get numeric comparisons on a column stored as text: { kind: 'number', indexed: true, derive: { from: 'power', using: 'numeric' } } gives gt/gte/lt/lte, and `power` still answers equals: '*'. Values the normalizer cannot map are ABSENT on the derived field, never guessed — set absent: true when the source has any.",
+          "properties": {
+            "from": {
+              "type": "string",
+              "description": "The field to read. Must be declared in schema.fields, and must not itself be derived (chaining is rejected)."
+            },
+            "using": {
+              "type": "string",
+              "enum": ["numeric", "lowercase", "trim", "fold"],
+              "description": "The transform to apply. `numeric`: a finite number, or absent (note '' is absent, not 0). `lowercase`: case-folded. `trim`: surrounding whitespace removed. `fold`: case AND diacritics removed, so a plain-ASCII query matches accented text. The transform's output kind must match this field's `kind` — numeric produces number, the rest produce string."
+            }
+          },
+          "required": ["from", "using"],
+          "additionalProperties": false
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "endsWith"
+            ],
+            "properties": {
+              "endsWith": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "indexed"
+            ],
+            "properties": {
+              "kind": {
+                "const": "string"
+              },
+              "indexed": {
+                "const": true
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "contains"
+            ],
+            "properties": {
+              "contains": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "indexed"
+            ],
+            "properties": {
+              "kind": {
+                "const": "string"
+              },
+              "indexed": {
+                "const": true
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "multi"
+            ],
+            "properties": {
+              "multi": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "indexed"
+            ],
+            "properties": {
+              "kind": {
+                "const": "string"
+              },
+              "indexed": {
+                "const": true
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "absent"
+            ],
+            "properties": {
+              "absent": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "indexed"
+            ],
+            "properties": {
+              "indexed": {
+                "const": true
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "values"
+            ]
+          },
+          "then": {
+            "properties": {
+              "kind": {
+                "const": "string"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "json"
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "indexed"
+                  ],
+                  "properties": {
+                    "indexed": {
+                      "const": true
+                    }
+                  }
+                },
+                {
+                  "required": [
+                    "endsWith"
+                  ],
+                  "properties": {
+                    "endsWith": {
+                      "const": true
+                    }
+                  }
+                },
+                {
+                  "required": [
+                    "contains"
+                  ],
+                  "properties": {
+                    "contains": {
+                      "const": true
+                    }
+                  }
+                },
+                {
+                  "required": [
+                    "multi"
+                  ],
+                  "properties": {
+                    "multi": {
+                      "const": true
+                    }
+                  }
+                },
+                {
+                  "required": [
+                    "values"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

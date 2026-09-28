@@ -1,5 +1,5 @@
-import { connect } from "./blockdb/client.js";
-import type { ProductsCategory } from "./blockdb/schema.js";
+import { connect } from "./zonedb/client.js";
+import type { ProductsCategory } from "./zonedb/schema.js";
 
 const db = connect();
 

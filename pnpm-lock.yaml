@@ -23,16 +23,13 @@ importers:
 
   examples/movies:
     dependencies:
-      blockdb:
+      zonedb:
         specifier: workspace:*
-        version: link:../../packages/blockdb
+        version: link:../../packages/zonedb
     devDependencies:
       '@types/node':
         specifier: ^20.19.0
         version: 20.19.43
-      blockdb-cli:
-        specifier: workspace:*
-        version: link:../../packages/blockdb-cli
       playwright:
         specifier: ^1.61.0
         version: 1.61.1
@@ -45,19 +42,19 @@ importers:
       vitest:
         specifier: ^4.1.0
         version: 4.1.10(@types/node@20.19.43)(vite@8.1.5(@types/node@20.19.43))
+      zonedb-cli:
+        specifier: workspace:*
+        version: link:../../packages/zonedb-cli
 
   examples/products:
     dependencies:
-      blockdb:
+      zonedb:
         specifier: workspace:*
-        version: link:../../packages/blockdb
+        version: link:../../packages/zonedb
     devDependencies:
       '@types/node':
         specifier: ^20.19.0
         version: 20.19.43
-      blockdb-cli:
-        specifier: workspace:*
-        version: link:../../packages/blockdb-cli
       playwright:
         specifier: ^1.61.0
         version: 1.61.1
@@ -70,6 +67,9 @@ importers:
       vitest:
         specifier: ^4.1.0
         version: 4.1.10(@types/node@20.19.43)(vite@8.1.5(@types/node@20.19.43))
+      zonedb-cli:
+        specifier: workspace:*
+        version: link:../../packages/zonedb-cli
 
   examples/shared:
     dependencies:
@@ -77,23 +77,23 @@ importers:
         specifier: ^1.61.0
         version: 1.61.1
 
-  packages/blockdb:
+  packages/zonedb:
     devDependencies:
       '@types/node':
         specifier: ^20.19.0
         version: 20.19.43
-      blockdb-cli:
+      zonedb-cli:
         specifier: workspace:*
-        version: link:../blockdb-cli
+        version: link:../zonedb-cli
 
-  packages/blockdb-cli:
+  packages/zonedb-cli:
     devDependencies:
       '@types/node':
         specifier: ^20.19.0
         version: 20.19.43
-      blockdb:
+      zonedb:
         specifier: workspace:*
-        version: link:../blockdb
+        version: link:../zonedb
 
 packages:
 

@@ -4,8 +4,8 @@
   "commit": false,
   "fixed": [
     [
-      "blockdb",
-      "blockdb-cli"
+      "zonedb",
+      "zonedb-cli"
     ]
   ],
   "linked": [],

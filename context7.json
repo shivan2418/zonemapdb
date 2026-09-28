@@ -1,14 +1,14 @@
 {
   "$schema": "https://context7.com/schema/context7.json",
-  "projectTitle": "blockdb",
-  "description": "Query large datasets from any static host: no backend, no WASM, no HTTP Range requests. blockdb splits a dataset into many small whole files at build time, indexes them, and generates a typed TypeScript client that fetches only the files a query needs.",
+  "projectTitle": "zonedb",
+  "description": "Query large datasets from any static host: no backend, no WASM, no HTTP Range requests. zonedb splits a dataset into many small whole files at build time, indexes them, and generates a typed TypeScript client that fetches only the files a query needs.",
   "folders": [
     "docs/adr",
     "docs/deploy-guide.md",
     "examples/movies/src",
     "examples/products/src",
-    "packages/blockdb/src",
-    "packages/blockdb-cli/config.schema.json"
+    "packages/zonedb/src",
+    "packages/zonedb-cli/config.schema.json"
   ],
   "excludeFolders": [
     "node_modules",
@@ -32,18 +32,18 @@
     "pnpm-lock.yaml"
   ],
   "rules": [
-    "Install with pnpm, two packages: `pnpm add blockdb && pnpm add -D blockdb-cli`. `blockdb` is the browser runtime (production dep); `blockdb-cli` is the Node build tool (devDep). Never use npm or yarn in examples.",
-    "The generated client is the only query API. Import it from the committed output: `import { connect } from './blockdb/client'` then `const db = connect()`. `connect()` with no arguments works for the standard deploy; override the location with `connect({ basePath: 'https://cdn.example.com/blockdb' })`.",
+    "Install with pnpm, two packages: `pnpm add zonedb && pnpm add -D zonedb-cli`. `zonedb` is the browser runtime (production dep); `zonedb-cli` is the Node build tool (devDep). Never use npm or yarn in examples.",
+    "The generated client is the only query API. Import it from the committed output: `import { connect } from './zonedb/client'` then `const db = connect()`. `connect()` with no arguments works for the standard deploy; override the location with `connect({ basePath: 'https://cdn.example.com/zonedb' })`.",
     "Do NOT write SQL and do NOT invent a chained/builder query API. Queries are a single plain object with a Prisma-style `where`: `db.movies.findMany({ where: { year: { gte: 2000 } }, orderBy: { rating: 'desc' }, limit: 20 })`.",
     "Query methods per collection are exactly: `findMany(args)` → `{ records, hasMore }`; `count(args)` → `{ count, exact }`; `get(id)` → the record or `null` (only generated when the dataset has a primary key); `getSchema()` → the runtime schema descriptor. There is no `create`, `update`, `delete`, `upsert`, or `findUnique`.",
     "Operators are per field type. string: `equals`, `not`, `in`, `contains`, `startsWith`, `endsWith`. number and date (ISO strings): `equals`, `not`, `in`, `gt`, `gte`, `lt`, `lte`. boolean: `equals`, `not`. multi-valued (string[]): `some` (existential), e.g. `{ genres: { some: 'Sci-Fi' } }`. Only indexed fields appear in `where` and `orderBy`.",
     "Boolean logic in v1.0 is implicit-AND across `where` keys only. There is NO `OR`, `AND`, or `NOT` key yet — express alternatives with multiple queries client-side.",
     "Pagination is offset/limit only (`limit`, `offset`) — there are no cursors in v1.0. `findMany` returns `hasMore` (computed via limit+1 over-fetch) for next-page detection.",
-    "blockdb is READ-ONLY from the browser. There is no way to mutate data at runtime; you update data by re-running `blockdb build` and redeploying.",
-    "CLI commands are `init`, `build`, and `inspect` (the `bin` is named `blockdb`; bootstrap the first run with `npx blockdb-cli init`). `init` is the ONLY place schema inference happens; `build` replays the baked schema and fails loud on drift — it never re-infers. There is no standalone `generate` command.",
-    "`blockdb build` writes two outputs: the served data tree (default `public/blockdb/`, deploy it — do not commit) and the generated `schema.ts` + `client.ts` (default `src/blockdb/`, DO commit them). The served tree entry point is `manifest.json` (stable name); everything else is content-hashed and immutable.",
-    "Configuration lives in a single committed `blockdb.config.json` validated by the published `config.schema.json`. Precedence is CLI flags > config file > inferred defaults; every wizard choice has an equivalent flag, so `init --yes` plus flags runs with zero prompts.",
+    "zonedb is READ-ONLY from the browser. There is no way to mutate data at runtime; you update data by re-running `zonedb build` and redeploying.",
+    "CLI commands are `init`, `build`, and `inspect` (the `bin` is named `zonedb`; bootstrap the first run with `npx zonedb-cli init`). `init` is the ONLY place schema inference happens; `build` replays the baked schema and fails loud on drift — it never re-infers. There is no standalone `generate` command.",
+    "`zonedb build` writes two outputs: the served data tree (default `public/zonedb/`, deploy it — do not commit) and the generated `schema.ts` + `client.ts` (default `src/zonedb/`, DO commit them). The served tree entry point is `manifest.json` (stable name); everything else is content-hashed and immutable.",
+    "Configuration lives in a single committed `zonedb.config.json` validated by the published `config.schema.json`. Precedence is CLI flags > config file > inferred defaults; every wizard choice has an equivalent flag, so `init --yes` plus flags runs with zero prompts.",
     "The runtime is ESM-only, zero third-party dependencies, framework-agnostic (pure `fetch`), and runs in the browser or Node >= 18. There are no framework adapters in 1.0.",
-    "Runtime errors are thrown as `BlockDbError` (with a `BlockDbErrorCode`). `connect()` asserts the runtime major version equals `manifest.formatVersion` and fails loud on a major mismatch — realign versions and re-run `blockdb build`."
+    "Runtime errors are thrown as `ZoneDbError` (with a `ZoneDbErrorCode`). `connect()` asserts the runtime major version equals `manifest.formatVersion` and fails loud on a major mismatch — realign versions and re-run `zonedb build`."
   ]
 }
