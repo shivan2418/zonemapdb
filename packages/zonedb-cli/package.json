@@ -1,6 +1,6 @@
 {
   "name": "zonedb-cli",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Build tool for zonedb: infer → partition → index → codegen + config wizard.",
   "type": "module",
   "license": "MIT",
