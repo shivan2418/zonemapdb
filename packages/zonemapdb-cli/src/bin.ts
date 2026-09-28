@@ -13,11 +13,19 @@ import type { InitOptions, InitResult } from "./init.js";
 import type { InspectReport } from "./inspect.js";
 import type { InputFormat } from "./types.js";
 
+// An option a command doesn't know is an error, not a no-op: silently ignoring `build --out x`
+// would build somewhere the caller didn't ask for.
+function unknownOption(command: string, arg: string | undefined): Error {
+  return new Error(`zonemapdb: ${command} has no option "${arg}" (see "zonemapdb ${command} --help")`);
+}
+
 function runBuild(rest: string[]): void {
   let configPath = "zonemapdb.config.json";
   for (let i = 0; i < rest.length; i++) {
     if (rest[i] === "--config") {
       configPath = rest[++i] ?? configPath;
+    } else {
+      throw unknownOption("build", rest[i]);
     }
   }
 
@@ -128,7 +136,8 @@ function parseInitArgs(rest: string[]): { configPath: string; options: Omit<Init
         indexChunkBytes = Number(rest[++i]);
         break;
       default:
-        if (arg !== undefined && !arg.startsWith("--")) inputPath = arg;
+        if (arg === undefined || arg.startsWith("-")) throw unknownOption("init", arg);
+        inputPath = arg;
     }
   }
 
@@ -234,8 +243,12 @@ function runInspect(rest: string[]): void {
       case "--json":
         json = true;
         break;
+      default:
+        throw unknownOption("inspect", rest[i]);
     }
   }
+
+  if (configPath === undefined && dir === undefined) configPath = "zonemapdb.config.json";
 
   const report = inspect({
     ...(configPath !== undefined ? { configPath: path.resolve(process.cwd(), configPath) } : {}),

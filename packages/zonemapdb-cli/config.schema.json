@@ -144,11 +144,11 @@
         },
         "absent": {
           "type": "boolean",
-          "description": "The key may be missing from a record (absent ≠ null). Types the field optional; on an indexed, single-valued, non-sort field it also unlocks isAbsent and exists. Inferred by init; build fails if a record lacks the key and this is not set."
+          "description": "The key may be missing from a record (absent ≠ null). Types the field optional; on a single-valued, non-sort field it also unlocks isAbsent and exists. Inferred by init; build fails if a record lacks the key and this is not set."
         },
         "nullable": {
           "type": "boolean",
-          "description": "The value may be null (null ≠ absent). Types the field `T | null`; on an indexed, single-valued, non-sort field it also unlocks isNull and exists. Inferred by init; build fails if a record holds null and this is not set."
+          "description": "The value may be null (null ≠ absent). Types the field `T | null`; on a single-valued, non-sort field it also unlocks isNull and exists. Inferred by init; build fails if a record holds null and this is not set."
         },
         "multi": {
           "type": "boolean",
@@ -263,28 +263,6 @@
               "kind": {
                 "const": "string"
               },
-              "indexed": {
-                "const": true
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "absent"
-            ],
-            "properties": {
-              "absent": {
-                "const": true
-              }
-            }
-          },
-          "then": {
-            "required": [
-              "indexed"
-            ],
-            "properties": {
               "indexed": {
                 "const": true
               }

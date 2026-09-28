@@ -27,6 +27,16 @@ describe("help text", () => {
     expect(phantom).toEqual([]);
   });
 
+  test("every flag the READMEs and guides mention is actually parsed by bin.ts", () => {
+    const docs = ["../README.md", "../../../README.md", "../../../docs/query-guide.md", "../../../docs/deploy-guide.md"]
+      .map((rel) => readFileSync(new URL(rel, import.meta.url), "utf8"))
+      .join("\n");
+    const allowed = new Set<string>(GLOBAL_FLAGS);
+    const mentioned = new Set([...docs.matchAll(FLAG_MENTION)].map((m) => m[1]!));
+    const phantom = [...mentioned].filter((flag) => !parsedFlags.has(flag) && !allowed.has(flag)).sort();
+    expect(phantom).toEqual([]);
+  });
+
   test("each command has its own help, naming itself and its usage line", () => {
     for (const [command, text] of Object.entries(COMMAND_HELP)) {
       expect(text).toContain(`zonemapdb ${command}`);

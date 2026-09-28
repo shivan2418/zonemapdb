@@ -42,7 +42,8 @@ Input
 Schema
   --sort-field <field>      Field to sort and range-partition by (number, date or string)
   --pk <field>              Field to use as the primary key, unlocking get(id)
-  --indexed <a,b,c>         The complete set of filterable fields (replaces, not merges)
+  --indexed <a,b,c>         The complete set of indexed fields, whose filters prune
+                            (replaces, not merges; every field is filterable anyway)
   --ends-with <a,b>         Also support endsWith on these (builds a reversed index)
   --contains <a,b>          Also support contains on these (builds a trigram index)
 
@@ -77,7 +78,7 @@ returned by findMany, but not filterable. Naming one in --indexed/--ends-with/
 
 An indexed string field with few enough distinct values is treated as enum-like:
 its values are baked into the config, codegen exports them as a named union, and
-equals/in/some narrow to it. Delete the field's "values" array in the config to
+equals/in/not/some/hasEvery narrow to it. Delete the field's "values" array in the config to
 widen it back to plain string.`;
 
 const BUILD_HELP = `zonemapdb build [options]
