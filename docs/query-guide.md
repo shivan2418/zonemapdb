@@ -6,6 +6,7 @@ A complete guide to the query API: every operator, what each method returns, and
 - [Connecting](#connecting)
 - [The four methods](#the-four-methods)
 - [Filtering rules](#filtering-rules)
+- [Riders: filters that don't narrow the read](#riders-filters-that-dont-narrow-the-read)
 - [Which operators a field gets](#which-operators-a-field-gets)
 - [Strings](#strings)
 - [Numbers and dates](#numbers-and-dates)
@@ -18,6 +19,8 @@ A complete guide to the query API: every operator, what each method returns, and
 - [Pagination](#pagination)
 - [Counting](#counting)
 - [Looking up by id](#looking-up-by-id)
+- [Cancelling a query](#cancelling-a-query)
+- [Running queries in a Web Worker](#running-queries-in-a-web-worker)
 - [What a query costs](#what-a-query-costs)
 - [Errors](#errors)
 - [What the compiler catches](#what-the-compiler-catches)
@@ -67,7 +70,7 @@ import { connect } from "./zonemapdb/client";
 const db = connect();
 ```
 
-With no arguments it fetches from the `basePath` baked in at build time (default `/zonemapdb`). Every option can be overridden:
+With no arguments it fetches from the `basePath` baked in at build time. That's the config's `basePath`, or else the `output` folder with any leading `public/` dropped, so the default `public/zonemapdb` becomes `/zonemapdb`. Every option can be overridden:
 
 ```ts
 const db = connect({
@@ -77,6 +80,8 @@ const db = connect({
 });
 ```
 
+If the build pre-compressed the manifest, the generated `connect()` also sets `manifestCompression` to match. Don't override it unless you've changed how the deploy is compressed.
+
 `db.books` is a real, named property, so go-to-definition and autocomplete work on the collection, its fields and each field's operators.
 
 ## The four methods
@@ -84,7 +89,7 @@ const db = connect({
 | Method | Returns | Notes |
 |---|---|---|
 | `findMany({ where?, orderBy?, limit?, offset? })` | `{ records, hasMore, total? }` | Full records, including payload-only fields. |
-| `count(where?)` | `{ count, exact }` | A zero-fetch upper bound. See [Counting](#counting). |
+| `count(where?)` | `{ count, exact }` | An upper bound that never downloads a data file. See [Counting](#counting). |
 | `get(id)` | the record, or `null` | Only exists when the config names a `pk`. |
 | `getSchema()` | the schema descriptor | Fields, kinds and enabled operators, for building UIs. |
 
@@ -101,7 +106,7 @@ await db.books.findMany({
 ```
 
 - **Everything ANDs.** Every field in `where` must match, and every operator on one field must match. There is no OR. See [No OR](#no-or-what-to-do-instead).
-- **Every field is queryable**, except fields of kind `json`, which are carried in records but never filtered. Indexing a field doesn't decide whether you can filter on it; it decides whether that filter makes the query cheaper.
+- **Every field is queryable**, except fields of kind `json`, which are carried in records but never filtered by value. A `json` field marked `nullable` or `absent` still gets the missing-value operators (`isNull`, `isAbsent`, `exists`). Indexing a field doesn't decide whether you can filter on it; it decides whether that filter makes the query cheaper.
 - **Every query needs one filter that narrows which files are read.** Filters that can't are [riders](#riders-filters-that-dont-narrow-the-read): they're fine alongside one that can, and rejected on their own.
 - **Operators come from the field's type and flags.** The type system offers exactly those, so a typo or a range on a text field is a compile error.
 
@@ -121,14 +126,14 @@ await db.books.findMany({
 });
 ```
 
-A `where` made only of riders would have to download every file, so it's rejected. With the generated types that's a compile error. For a `where` built at runtime, such as from UI input, it's a `ZonemapDbError` with code `NEEDS_PRUNING`, whose message names the fields that can prune. `count` accepts riders on their own, because it never downloads data.
+A `where` made only of riders would have to download every file, so it's rejected. With the generated types that's a compile error. For a `where` built at runtime, such as from UI input, it's a `ZonemapDbError` with code `NEEDS_PRUNING`, whose message names the fields that can prune. `count` accepts riders on their own, because it never downloads data files.
 
 ```ts
 await db.books.findMany({ where: { inStock: { equals: true } } }); // ✗ only a rider
-await db.books.count({ inStock: { equals: true } });               // ✓ an upper bound, no download
+await db.books.count({ inStock: { equals: true } });               // ✓ an upper bound, no data files read
 ```
 
-**Checking a `where` built from UI input.** The compiler can't see the rules that depend on a value. `contains` prunes only with **3 or more characters**, because a shorter needle has no trigram to look up. An empty `startsWith` or `endsWith`, an empty `hasEvery` and `isEmpty: false` match every block, so they ride too. So `{ title_fold: { contains: "ab" } }` or `{ tags: { hasEvery: [] } }` (no chip selected) type-checks, then throws `NEEDS_PRUNING` at runtime if nothing else in the `where` prunes. To fall back instead of catching the error, ask `wherePrunes` first. It applies exactly the rule `findMany` enforces, against the schema you pass. `findMany` checks against the deployed manifest's schema, so the two agree as long as the bundled client and the deploy come from the same build:
+**Checking a `where` built from UI input.** The compiler can't see the rules that depend on a value. `contains` prunes only with **3 or more characters**, because a shorter needle has no trigram to look up. An empty `startsWith` or `endsWith` (on any field, the sort field included) and an empty `hasEvery` match every block, so they ride too. So does `isEmpty: false`, which the types already reject but a `where` built at runtime can still hold. So `{ title_fold: { contains: "ab" } }` or `{ tags: { hasEvery: [] } }` (no chip selected) type-checks, then throws `NEEDS_PRUNING` at runtime if nothing else in the `where` prunes. To fall back instead of catching the error, ask `wherePrunes` first. It applies exactly the rule `findMany` enforces, against the schema you pass. `findMany` checks against the deployed manifest's schema, so the two agree as long as the bundled client and the deploy come from the same build:
 
 ```ts
 import { normalize, wherePrunes } from "zonemapdb";
@@ -140,7 +145,7 @@ const { records } = wherePrunes(where, db.books.getSchema())
     await db.books.findMany({ where: { ...where, title: { startsWith: userInput } }, limit: 20 });
 ```
 
-`wherePrunes` answers "would `findMany` accept this?", not "does this narrow the read?". An empty or missing `where` returns `true`, because an unfiltered `findMany` is allowed: with a `limit` and no `orderBy` other than the sort field, it reads blocks in sort order and stops once the page is full. Without a `limit`, or ordered by another field, it reads every block. So if your UI can clear every filter, check for the empty case yourself before deciding whether to add a range.
+`wherePrunes` answers "would `findMany` accept this?", not "does this narrow the read?". An empty or missing `where` returns `true`, because an unfiltered `findMany` is allowed: with a `limit` and no `orderBy` other than the sort field, it reads blocks in sort order and stops once the page is full. Otherwise it reads every block (see [Sorting](#sorting) for exactly when). So if your UI can clear every filter, check for the empty case yourself before deciding whether to add a range.
 
 A filter or operator set to `undefined` is left out, the same as if it weren't written: `{ set: chosen ? { equals: chosen } : undefined }` filters on `set` only when something is chosen. `findMany`, `count` and `wherePrunes` all drop these first, so a `where` whose filters are all `undefined` is the empty `where`.
 
@@ -154,7 +159,7 @@ const { records, hasMore } = await db.books.findMany({
 });
 ```
 
-A scan needs a `limit`, and it can't have an `orderBy` on any field but the sort field. Without those it couldn't stop early, so the compiler rejects a missing `limit`, and the runtime rejects the ordering with `NEEDS_PRUNING`. The cost depends on the data. A rider most records match fills the page from the first file or two. One that few records match can read most of the dataset before the page fills, or before it runs out. So use a scan where either outcome is acceptable, like a browse view, and keep a pruning filter wherever you have one. There's no need for a fake range such as `{ title: { gte: "" } }` to get past the rider check; that costs the same and hides the intent.
+A scan needs a `limit`, and its order has to be the order the files are stored in: no `orderBy`, or `orderBy` on the sort field alone. Without those it couldn't stop early. The compiler rejects a missing `limit`. The runtime rejects, with `NEEDS_PRUNING`, an `orderBy` on another field, one with several keys, and an `orderBy` on the sort field when some records have no sort value (see [Sorting](#sorting)). The cost depends on the data. A rider most records match fills the page from the first file or two. One that few records match can read most of the dataset before the page fills, or before it runs out. So use a scan where either outcome is acceptable, like a browse view, and keep a pruning filter wherever you have one. There's no need for a fake range such as `{ title: { gte: "" } }` to get past the rider check; that costs the same and hides the intent.
 
 **When to index a field.** Index it when a filter on it should narrow the read by itself. Leave it unindexed when it's only ever combined with a more selective filter, or when its values are spread across every file anyway: a boolean, or a house number in an address list sorted by street. `zonemapdb build` warns about an index whose average value appears in most files, because that index costs build output and saves nothing.
 
@@ -163,13 +168,14 @@ A scan needs a `limit`, and it can't have an `orderBy` on any field but the sort
 | Field | Operators | Of those, prune |
 |---|---|---|
 | Sort field, number or date | `equals` `in` `gt` `gte` `lt` `lte` `not` | all but `not` |
-| Sort field, string | the same, plus `startsWith` `endsWith` `contains` | all but `not` `endsWith` `contains` |
+| Sort field, string | the same, plus `startsWith` `endsWith` `contains` | all but `not` `endsWith` `contains` (an empty `startsWith` rides) |
 | String | `equals` `in` `startsWith` `endsWith` `contains` `not` | if indexed: `equals` `in` `startsWith`, plus `endsWith` / `contains` if opted in (`contains` with 3+ characters; an empty `startsWith` / `endsWith` rides) |
 | Number or date | `equals` `in` `gt` `gte` `lt` `lte` `not` | if indexed: all but `not` |
 | Boolean | `equals` `not` | if indexed: `equals` |
 | List (`"multi": true`, always indexed) | `some` `every` `hasEvery` `isEmpty` | `some` / `every` through their element filter, `hasEvery` with at least one value, `isEmpty: true` |
 | Not a list or the sort field, with `"nullable": true` | also `isNull` `exists` | none |
 | Not a list or the sort field, with `"absent": true` | also `isAbsent` `exists` | none |
+| `json`, with `"nullable"` or `"absent"` | only the missing-value operators above | none |
 
 ## Strings
 
@@ -198,7 +204,7 @@ await db.books.findMany({ where: { title_fold: { contains: "atlas" } } });
 
 `zonemapdb build` warns when one of these indexes barely prunes, which is typical of identifiers and near-constant fields.
 
-**Value unions.** When a string field has few distinct values, `init` records them in `values`. Codegen then narrows `equals`, `in`, `some` and `hasEvery` to that union, so `language: { equals: "xx" }` is a compile error and your editor autocompletes the valid values. `startsWith`, `endsWith` and `contains` stay plain `string`, because a fragment of a value isn't itself a value. The union is exported by name (`BooksLanguage` here), which is handy for building a picker. Delete `values` from the config to widen the field back to `string`.
+**Value unions.** When a string field has few distinct values, `init` records them in `values`. Codegen then narrows `equals`, `in`, `not`, `hasEvery` and the element filters of `some` and `every` to that union, so `language: { equals: "xx" }` is a compile error and your editor autocompletes the valid values. `startsWith`, `endsWith` and `contains` stay plain `string`, because a fragment of a value isn't itself a value. The generated `schema.ts` exports the union by name, collection plus field (`BooksLanguage` here), which is handy for building a picker. Set `"valuesType": "Language"` on the field to name it yourself; fields with the same `valuesType` share one union. Delete `values` from the config to widen the field back to `string`.
 
 ### Case- and accent-insensitive search
 
@@ -309,7 +315,7 @@ const merged = new Map([...byAuthor.records, ...byTag.records].map((b) => [b.id,
 
 ## Sorting
 
-`orderBy` takes any queryable field, `"asc"` or `"desc"`. Several keys break ties in the order you write them:
+`orderBy` takes any field except a `json` one, `"asc"` or `"desc"`. It accepts list fields too, but compares them as joined strings, which is rarely a useful order. Several keys break ties in the order you write them:
 
 ```ts
 await db.books.findMany({ orderBy: { title: "desc" }, limit: 10 });
@@ -319,11 +325,11 @@ await db.books.findMany({
 });
 ```
 
-Without `orderBy`, results come in sort-field order.
+Without `orderBy`, results come in the order they're stored: ascending by the sort field, with records that have no sort value last.
 
-**Sorting by the sort field is cheap; sorting by anything else reads every candidate.** Data is stored in sort-field order, so a page sorted by the sort field is read from the first few files and the walk stops. To sort by `rating`, zonemapdb must first read every record the `where` selects, so narrow the `where` before sorting large collections by another field.
+**Sorting by the sort field is cheap; sorting by anything else reads every candidate.** Data is stored in sort-field order, so with a `limit`, a page ordered by the sort field alone is read from the first few files (the last few for `"desc"`) and the walk stops. Everything else reads every file the `where` selects before it can return a page: an `orderBy` on another field, one with several keys, no `limit`, or an `orderBy` on the sort field when some records have no sort value. So narrow the `where` before sorting large collections by another field.
 
-Missing values sort first in ascending order and last in descending order.
+With an explicit `orderBy`, missing values sort first in ascending order and last in descending order. On the sort field that differs from the stored order, where they come last, which is why that case has to read every candidate.
 
 ## Pagination
 
@@ -339,13 +345,13 @@ page.hasMore; // true if there's a fourth page
 page.total;   // the exact match count, when zonemapdb had to see every match anyway
 ```
 
-`total` is present only when answering the query already meant seeing every match: an `orderBy` on a field other than the sort field, no `limit`, or a page at or past the end. It's the true count, so prefer it over `count()` when it's there.
+`total` is present only when answering the query already meant reading every file the `where` selects. That's every case in [Sorting](#sorting) that reads every candidate, plus a walk in sort order that reached the last candidate before the page filled. The walk fetches files four at a time, so a query with few candidate files often gets `total` alongside `hasMore: true`. It's the true count, so prefer it over `count()` when it's there.
 
 **The result ceiling.** A query never returns more than `maxResults` records (default 10,000). An explicit `limit` above it throws, and so does a query without `limit` that matches more records than that. Nothing is ever silently truncated. Paginate, or raise `maxResults` in `connect()` if you really need everything.
 
 ## Counting
 
-`count` answers from the manifest alone, without fetching any data files, so it's instant but approximate:
+`count` never fetches a data file. It answers from the manifest, plus any index chunks a filter on an indexed field needs, so it's fast but approximate:
 
 ```ts
 const { count, exact } = await db.books.count({ language: { equals: "de" } });
@@ -370,6 +376,8 @@ It's a compile error on a collection without a primary key.
 `findMany`, `count` and `get` take an optional `signal`, the standard `AbortSignal`. When it fires, the query's pending fetches are cancelled and the call rejects with `ZonemapDbError` code `ABORTED`. This suits search-as-you-type, where each keystroke supersedes the last query:
 
 ```ts
+import { ZonemapDbError } from "zonemapdb";
+
 let search: AbortController | undefined;
 
 async function onInput(term: string) {
@@ -402,8 +410,7 @@ A query parses every data file it downloads, and a block is often a few megabyte
 import { ZonemapDbError } from "zonemapdb";
 import { connect } from "./zonemapdb/client";
 
-// A relative basePath resolves against the worker script's URL, not the page's: pass an absolute one.
-const db = connect({ basePath: new URL("/zonemapdb", self.location.origin).href });
+const db = connect();
 
 let search: AbortController | undefined;
 
@@ -424,20 +431,22 @@ self.onmessage = async (e: MessageEvent<{ term: string }>) => {
 };
 ```
 
+The default `basePath` (`/zonemapdb`) starts with `/`, so it resolves the same in a worker as on the page. A path-relative `basePath` such as `"data/books"` resolves against the worker script's URL instead, and a worker made from a `blob:` URL has no usable base at all. In those cases pass an absolute URL: `connect({ basePath: new URL("data/books", location.origin).href })`.
+
 On the page, create it with `new Worker(new URL("./search.worker.ts", import.meta.url), { type: "module" })`, `postMessage({ term })` on input, and render the results that come back. Records cross to the page as structured clones, which is cheap next to parsing. Each worker has its own client, so its manifest is downloaded once per worker, not shared with a client on the page.
 
 ## What a query costs
 
-Every query first loads the manifest (once per client, revalidated with the host via `cache: "no-cache"`). The manifest records each file's value ranges, so the sort field and number/date ranges can rule out files without fetching anything else. Other operators may fetch small index chunks (about 45 KB each) to find which files contain a value. zonemapdb then fetches the remaining data files.
+Every query first loads the manifest (once per client, revalidated with the host via `cache: "no-cache"`). The manifest records each file's value ranges, so the sort field and number/date ranges can rule out files without fetching anything else. On a large dataset those ranges for secondary fields may live in small sidecar files instead, fetched the first time a query needs them. Other operators may fetch small index chunks (about 45 KB each) to find which files contain a value. zonemapdb then fetches the remaining data files.
 
-Files fetched per query (after the manifest) on a build of 4,000 books in 47 data files:
+Roughly how many files a query fetches after the manifest, on a dataset split into a few dozen data files. The exact numbers depend on your data:
 
 | Query | Files | Why |
 |---|---|---|
 | `title: { equals }` | 1 | The manifest's sort-field ranges point at the one file |
 | `get` by id | 2 | One index chunk, then the file it names |
-| `title: { startsWith }` or a title range | 3 | A contiguous run of files, no index needed |
-| Any query with a small `limit` and no `orderBy` | about 5 | The walk stops once the page is full |
+| `title: { startsWith }` or a title range | a few | A contiguous run of files, no index needed |
+| Any query with a small `limit` and no `orderBy` | 4, then 8, … | The walk fetches four files at a time and stops once the page is full |
 | `pages: { gte, lte }` on an indexed field | up to all | Only pruned where files' value ranges don't overlap |
 | `tags: { every: … }`, `author: { endsWith }` | most | These admit many files |
 | `orderBy` on a non-sort field | every candidate | Ordering needs all matches |
@@ -468,25 +477,26 @@ try {
 
 | Code | Meaning | Retry? |
 |---|---|---|
-| `CONFIG` | No manifest at `basePath` (404 or unreachable). Check `basePath`. | No |
-| `FORMAT_VERSION` | The deployed data was built by an incompatible major version. Rebuild. | No |
-| `DEPLOY_INTEGRITY` | A file the manifest names is missing, even after refetching the manifest. Usually a partial deploy, a client generated by a different build, or a stale cache (a CDN, a `fetch` wrapper, or an old page and bundled client) serving an earlier deploy. | No |
-| `NETWORK` | `fetch` failed or returned a non-404 error status. `e.status` holds the status if there was one. | Maybe |
+| `CONFIG` | No manifest at `basePath`: a 404, or an HTML page in its place (a single-page-app fallback). Check `basePath`. Also thrown for an unknown `scan` mode. | No |
+| `FORMAT_VERSION` | The deployed data was built by an incompatible major version, or by a version too old for this runtime (before 0.3.0). Rebuild. | No |
+| `DEPLOY_INTEGRITY` | A file the manifest names is missing (a 404, or an HTML fallback page), even after refetching the manifest. Usually a partial deploy, a client generated by a different build, or a stale cache (a CDN, a `fetch` wrapper, or an old page and bundled client) serving an earlier deploy. | No |
+| `NETWORK` | `fetch` failed (an unreachable host, a blocked request) or returned a non-404 error status. | Maybe |
 | `CORRUPT_DATA` | A file didn't parse, or didn't decompress (for example, brotli on a host that can't serve it; see the [deploy guide](deploy-guide.md)). | No |
 | `LIMIT_EXCEEDED` | The query would return more than `maxResults`. | No, paginate |
-| `NEEDS_PRUNING` | Every filter in the `where` is a [rider](#riders-filters-that-dont-narrow-the-read), so the query would read the whole dataset. Add a filter that prunes. | No |
+| `NEEDS_PRUNING` | Every filter in the `where` is a [rider](#riders-filters-that-dont-narrow-the-read), so the query would read the whole dataset. Add a filter that prunes. Also thrown for a `scan: "block-order"` that can't stop early. | No |
 | `ABORTED` | The query's `signal` fired (see [Cancelling a query](#cancelling-a-query)). Not a failure: usually a newer query superseded it. | No, ignore it |
 
-Errors carry `e.url` (the file being fetched) where relevant. They never include your `where`, so filter values don't end up in logs. There's no built-in retry for network errors: wrap `fetch` instead, as the [deploy guide](deploy-guide.md) shows. The one thing zonemapdb retries is a stale manifest: if a file the manifest names returns 404, it refetches the manifest with `cache: "reload"`, and if the new manifest no longer names that file, it reruns the query once against it. This covers a browser that kept the previous deploy's manifest after a redeploy.
+Errors carry `e.url` (the file being fetched) where relevant, and `e.status` when there was an HTTP status (`NETWORK`, `CONFIG`, `DEPLOY_INTEGRITY`). They never include your `where`, so filter values don't end up in logs. There's no built-in retry for network errors: wrap `fetch` instead, as the [deploy guide](deploy-guide.md) shows. The one thing zonemapdb retries is a stale manifest: if a file the manifest names returns 404, it refetches the manifest with `cache: "reload"`, and if the new manifest no longer names that file, it reruns the query once against it. This covers a browser that kept the previous deploy's manifest after a redeploy.
 
 ## What the compiler catches
 
 The generated types reject, at compile time:
 
-- a field that isn't queryable: unknown, or a `json` payload
+- a field that isn't queryable: an unknown field, or a value operator on a `json` payload
 - an operator the field's type doesn't have, such as a range on a string field other than the sort field
 - a value outside a field's value union
 - `isNull` on a field that isn't `nullable`, `isAbsent` on one that isn't `absent`, and `exists` on one that's neither
 - a `where` made only of riders, such as only `not`, only `isNull`, or only filters on unindexed fields
 - `get` on a collection without a primary key
-- `orderBy` on a field that isn't queryable
+- `isEmpty: false` (write nothing instead)
+- `orderBy` on an unknown field or a `json` field

@@ -8,9 +8,9 @@ Query large datasets from any static host: no backend, no WASM, no HTTP Range re
 
 ```bash
 pnpm add zonemapdb && pnpm add -D zonemapdb-cli
-npx zonemapdb init data/movies.ndjson   # a guided wizard reads your data, recommends
-                                      #   what to index, and writes zonemapdb.config.json
-npx zonemapdb build                     # → public/zonemapdb/ (deploy this) + src/zonemapdb/ (commit this)
+pnpm exec zonemapdb init data/movies.ndjson   # a guided wizard reads your data, recommends
+                                            #   what to index, and writes zonemapdb.config.json
+pnpm exec zonemapdb build                     # → public/zonemapdb/ (deploy this) + src/zonemapdb/ (commit this)
 ```
 
 ```ts
@@ -23,6 +23,8 @@ const { records } = await db.movies.findMany({
   limit: 20,
 });
 ```
+
+The extensionless import assumes a bundler (Vite, webpack, esbuild) or `"moduleResolution": "bundler"`. Under `nodenext`, import `./zonemapdb/client.js`.
 
 Every operator, sorting, pagination, counting and what each query costs: see the **[query guide](docs/query-guide.md)**.
 

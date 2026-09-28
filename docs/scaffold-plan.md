@@ -1,5 +1,7 @@
 # Ticket 1 — Monorepo scaffold: exact end state
 
+> **Historical.** This is the plan for the first ticket, written when the project was called `static-shard`. The names, versions and `engines` values below are from then; it has since been renamed to blockdb, zonedb and now zonemapdb (ADR-0011, ADR-0014). See the root README and the package READMEs for the current state.
+
 Goal: a two-package lockstep pnpm monorepo, both packages empty but green (`build`/`test`/`typecheck`/`pack:check`), ready for every later ticket. Stack: **pnpm workspaces · TypeScript `tsc` (ESM + `.d.ts`) · vitest · changesets (fixed/lockstep) · GitHub Actions CI**.
 
 > Before finalizing versions/config, confirm the fiddly bits against context7: changesets `fixed` config, pnpm workspace file, and the `package.json` `exports` map. Install with latest (`pnpm add -D … -w`) rather than pinning guessed versions.

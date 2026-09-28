@@ -10,9 +10,9 @@ See the [project README](https://github.com/shivan2418/zonemapdb#readme) for the
 
 ```bash
 pnpm add zonemapdb && pnpm add -D zonemapdb-cli
-npx zonemapdb init data/movies.ndjson   # a guided wizard reads your data, recommends
-                                      #   what to index, and writes zonemapdb.config.json
-npx zonemapdb build                     # → public/zonemapdb/ (deploy this) + src/zonemapdb/ (commit this)
+pnpm exec zonemapdb init data/movies.ndjson   # a guided wizard reads your data, recommends
+                                            #   what to index, and writes zonemapdb.config.json
+pnpm exec zonemapdb build                     # → public/zonemapdb/ (deploy this) + src/zonemapdb/ (commit this)
 ```
 
 ```ts
@@ -25,6 +25,8 @@ const { records, hasMore } = await db.movies.findMany({
   limit: 20,
 });
 ```
+
+The extensionless import assumes a bundler (Vite, webpack, esbuild) or `"moduleResolution": "bundler"`. Under `nodenext`, import `./zonemapdb/client.js`.
 
 `db.<collection>` is a real, named member with go-to-definition and intellisense on both the field and its available operators — the type system offers exactly the operators each field's type allows, and rejects a query none of whose filters can narrow which files are read (see [Riders](https://github.com/shivan2418/zonemapdb/blob/master/docs/query-guide.md#riders-filters-that-dont-narrow-the-read)). See [`examples/`](https://github.com/shivan2418/zonemapdb/tree/master/examples) in the repo for two complete, working example apps (movie catalog, product lookup) that build → deploy → query in a real browser.
 
