@@ -23,7 +23,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/shivan2418/blockdb.git",
+    "url": "git+https://github.com/shivan2418/zonemapdb.git",
     "directory": "packages/zonemapdb-cli"
   },
   "devDependencies": {

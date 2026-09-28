@@ -35,11 +35,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/shivan2418/blockdb.git",
+    "url": "git+https://github.com/shivan2418/zonemapdb.git",
     "directory": "packages/zonemapdb"
   },
-  "homepage": "https://github.com/shivan2418/blockdb#readme",
-  "bugs": "https://github.com/shivan2418/blockdb/issues",
+  "homepage": "https://github.com/shivan2418/zonemapdb#readme",
+  "bugs": "https://github.com/shivan2418/zonemapdb/issues",
   "devDependencies": {
     "@types/node": "^20.19.0",
     "zonemapdb-cli": "workspace:*"

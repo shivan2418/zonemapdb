@@ -22,7 +22,7 @@ npm suggested a user scope each time (`@shivan2418/...`). A scope can't collide 
    - `BlockDbError` → `ZonemapDbError`, `BlockDbErrorCode` → `ZonemapDbErrorCode`, `BlockDbConfig` → `ZonemapDbConfig` ("zonemap" is one word, as in the domain term)
    - `zonemapdb.config.json`, output `public/zonemapdb/`, generated client `src/zonemapdb/`, messages prefixed `zonemapdb:`
 5. **Domain terms don't change.** Block, Chunk, zonemap, missing tail, rider and the manifest's field names are untouched, so the served format is byte-for-byte what it was, apart from `generatorVersion`. `formatVersion` stays 0.
-6. **The GitHub repo name is a separate step.** Links still point at `shivan2418/blockdb` until the repo moves; GitHub redirects the old URL when it does.
+6. **The GitHub repo moved** from `shivan2418/blockdb` to `shivan2418/zonemapdb`. GitHub redirects the old URL, including the release tarball links the demos installed from.
 
 ## Consequences
 

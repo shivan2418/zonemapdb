@@ -5,7 +5,7 @@
 
 ### Issue tracker
 
-Issues and PRDs live as GitHub issues (`shivan2418/blockdb`), managed via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+Issues and PRDs live as GitHub issues (`shivan2418/zonemapdb`), managed via the `gh` CLI. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 

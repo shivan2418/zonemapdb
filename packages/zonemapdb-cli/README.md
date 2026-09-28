@@ -99,7 +99,7 @@ book.cover?.ulr;  // compile error
 
 This is an **unchecked assertion**. zonemapdb relays the payload verbatim and never validates it against the type you declared; keeping the declaration true of your data is your job, exactly as with a database driver's row type. Validation stays out of scope.
 
-See the [project README](https://github.com/shivan2418/blockdb#readme) for the full pitch and design, and [`examples/`](https://github.com/shivan2418/blockdb/tree/master/examples) for two complete example apps built with this CLI. For querying, see the [query guide](https://github.com/shivan2418/blockdb/blob/master/docs/query-guide.md).
+See the [project README](https://github.com/shivan2418/zonemapdb#readme) for the full pitch and design, and [`examples/`](https://github.com/shivan2418/zonemapdb/tree/master/examples) for two complete example apps built with this CLI. For querying, see the [query guide](https://github.com/shivan2418/zonemapdb/blob/master/docs/query-guide.md).
 
 ## License
 

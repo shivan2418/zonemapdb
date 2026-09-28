@@ -4,7 +4,7 @@ Query large datasets from any static host: no backend, no WASM, no HTTP Range re
 
 This is the **runtime** package: a zero-third-party-dependency, ESM-only browser client that fetches a manifest and the handful of small block/index files a query actually needs, and returns fully-typed records. It has no `bin` and does no building — pair it with [`zonemapdb-cli`](https://www.npmjs.com/package/zonemapdb-cli) (a devDependency) to partition your data and generate the typed client this package powers.
 
-See the [project README](https://github.com/shivan2418/blockdb#readme) for the full pitch, design, and alternatives comparison.
+See the [project README](https://github.com/shivan2418/zonemapdb#readme) for the full pitch, design, and alternatives comparison.
 
 ## Quickstart
 
@@ -26,11 +26,11 @@ const { records, hasMore } = await db.movies.findMany({
 });
 ```
 
-`db.<collection>` is a real, named member with go-to-definition and intellisense on both the field and its available operators — the type system offers exactly the operators each field's type allows, and rejects a query none of whose filters can narrow which files are read (see [Riders](https://github.com/shivan2418/blockdb/blob/master/docs/query-guide.md#riders-filters-that-dont-narrow-the-read)). See [`examples/`](https://github.com/shivan2418/blockdb/tree/master/examples) in the repo for two complete, working example apps (movie catalog, product lookup) that build → deploy → query in a real browser.
+`db.<collection>` is a real, named member with go-to-definition and intellisense on both the field and its available operators — the type system offers exactly the operators each field's type allows, and rejects a query none of whose filters can narrow which files are read (see [Riders](https://github.com/shivan2418/zonemapdb/blob/master/docs/query-guide.md#riders-filters-that-dont-narrow-the-read)). See [`examples/`](https://github.com/shivan2418/zonemapdb/tree/master/examples) in the repo for two complete, working example apps (movie catalog, product lookup) that build → deploy → query in a real browser.
 
 ## Querying
 
-The full reference, with every operator, sorting, pagination, counting, errors and what each query costs, is the **[query guide](https://github.com/shivan2418/blockdb/blob/master/docs/query-guide.md)**. Two things worth knowing up front:
+The full reference, with every operator, sorting, pagination, counting, errors and what each query costs, is the **[query guide](https://github.com/shivan2418/zonemapdb/blob/master/docs/query-guide.md)**. Two things worth knowing up front:
 
 ### List fields
 

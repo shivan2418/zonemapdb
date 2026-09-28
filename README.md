@@ -26,7 +26,7 @@ const { records } = await db.movies.findMany({
 
 Every operator, sorting, pagination, counting and what each query costs: see the **[query guide](docs/query-guide.md)**.
 
-Two complete, working example apps — a movie catalog and a product lookup, each building → deploying → querying in a real browser — live in [`examples/`](https://github.com/shivan2418/blockdb/tree/master/examples).
+Two complete, working example apps — a movie catalog and a product lookup, each building → deploying → querying in a real browser — live in [`examples/`](https://github.com/shivan2418/zonemapdb/tree/master/examples).
 
 ## Why zonemapdb?
 
