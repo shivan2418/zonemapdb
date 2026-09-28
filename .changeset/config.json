@@ -4,8 +4,8 @@
   "commit": false,
   "fixed": [
     [
-      "zonedb",
-      "zonedb-cli"
+      "zonemapdb",
+      "zonemapdb-cli"
     ]
   ],
   "linked": [],

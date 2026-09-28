@@ -49,13 +49,13 @@ function assertNoRuntimeDeps(pkgDir, pkgName) {
   }
 }
 
-const runtimeDir = path.join(packagesDir, "zonedb");
-const cliDir = path.join(packagesDir, "zonedb-cli");
+const runtimeDir = path.join(packagesDir, "zonemapdb");
+const cliDir = path.join(packagesDir, "zonemapdb-cli");
 
-assertOnlyAllowed("zonedb", packFiles("zonedb", runtimeDir));
-assertNoRuntimeDeps(runtimeDir, "zonedb");
+assertOnlyAllowed("zonemapdb", packFiles("zonemapdb", runtimeDir));
+assertNoRuntimeDeps(runtimeDir, "zonemapdb");
 
-assertOnlyAllowed("zonedb-cli", packFiles("zonedb-cli", cliDir), ["config.schema.json"]);
+assertOnlyAllowed("zonemapdb-cli", packFiles("zonemapdb-cli", cliDir), ["config.schema.json"]);
 
 if (process.exitCode) {
   process.exit(process.exitCode);

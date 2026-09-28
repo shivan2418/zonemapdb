@@ -1,0 +1,20 @@
+{
+  "$schema": "./node_modules/zonemapdb-cli/config.schema.json",
+  "collection": "movies",
+  "input": {
+    "path": "data/movies.ndjson"
+  },
+  "blockBytes": 65536,
+  "schema": {
+    "sortField": "year",
+    "fields": {
+      "id": { "kind": "string" },
+      "title": { "kind": "string", "indexed": true, "contains": true },
+      "year": { "kind": "number" },
+      "rating": { "kind": "number" },
+      "director": { "kind": "string" },
+      "genres": { "kind": "string", "indexed": true, "multi": true },
+      "overview": { "kind": "string" }
+    }
+  }
+}

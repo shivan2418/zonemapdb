@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "description": "Shared build->deploy->query-in-a-browser test harness for the zonedb examples.",
+  "description": "Shared build->deploy->query-in-a-browser test harness for the zonemapdb examples.",
   "dependencies": {
     "playwright": "^1.61.0"
   }

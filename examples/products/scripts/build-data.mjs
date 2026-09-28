@@ -1,14 +1,14 @@
 #!/usr/bin/env node
-// Runs the real `zonedb-cli build()` against the committed config — regenerates
-// `public/zonedb/` (gitignored, the "deploy this" tree) and `src/zonedb/` (committed).
+// Runs the real `zonemapdb-cli build()` against the committed config — regenerates
+// `public/zonemapdb/` (gitignored, the "deploy this" tree) and `src/zonemapdb/` (committed).
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { build, loadConfigFile } from "zonedb-cli";
+import { build, loadConfigFile } from "zonemapdb-cli";
 
 const baseDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 export function run() {
-  const config = loadConfigFile(path.join(baseDir, "zonedb.config.json"));
+  const config = loadConfigFile(path.join(baseDir, "zonemapdb.config.json"));
   const result = build(config, { baseDir });
   if (result.warnings.length > 0) {
     for (const w of result.warnings) console.warn(`[build-data] warning: ${w}`);

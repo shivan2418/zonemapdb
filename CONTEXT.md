@@ -1,4 +1,4 @@
-# zonedb
+# zonemapdb
 
 Glossary for the project: a build tool that splits a large static dataset into many small whole files, indexes them, and generates a typed client that fetches only the files a query needs — no backend, no WASM, no HTTP Range.
 

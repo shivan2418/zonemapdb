@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "description": "zonedb example: a movie-catalog browser (NDJSON input, range + contains + multi-valued queries).",
+  "description": "zonemapdb example: a movie-catalog browser (NDJSON input, range + contains + multi-valued queries).",
   "scripts": {
     "generate-data": "node scripts/generate-data.mjs",
     "build-data": "node scripts/build-data.mjs",
@@ -14,10 +14,10 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "zonedb": "workspace:*"
+    "zonemapdb": "workspace:*"
   },
   "devDependencies": {
-    "zonedb-cli": "workspace:*",
+    "zonemapdb-cli": "workspace:*",
     "@types/node": "^20.19.0",
     "typescript": "^7.0.0",
     "vite": "^8.1.0",

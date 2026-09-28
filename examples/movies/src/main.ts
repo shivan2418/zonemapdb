@@ -1,4 +1,4 @@
-import { connect } from "./zonedb/client.js";
+import { connect } from "./zonemapdb/client.js";
 
 const db = connect();
 

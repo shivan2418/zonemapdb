@@ -1,5 +1,5 @@
-import { connect } from "./zonedb/client.js";
-import type { ProductsCategory } from "./zonedb/schema.js";
+import { connect } from "./zonemapdb/client.js";
+import type { ProductsCategory } from "./zonemapdb/schema.js";
 
 const db = connect();
 

@@ -1,0 +1,39 @@
+{
+  "name": "zonemapdb-cli",
+  "version": "0.7.0",
+  "description": "Build tool for zonemapdb: infer → partition → index → codegen + config wizard.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Emil Elgaard",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "zonemapdb": "./dist/bin.js"
+  },
+  "files": [
+    "dist",
+    "config.schema.json"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shivan2418/blockdb.git",
+    "directory": "packages/zonemapdb-cli"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.0",
+    "zonemapdb": "workspace:*"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "pack:check": "pnpm pack --dry-run --json"
+  }
+}
