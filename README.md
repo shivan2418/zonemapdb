@@ -30,7 +30,7 @@ Two complete, working example apps — a movie catalog and a product lookup, eac
 
 Two live demos run on GitHub Pages with real datasets:
 
-- **[Card search](https://shivan2418.github.io/blockdb-demo-scryfall/)** ([source](https://github.com/shivan2418/blockdb-demo-scryfall)): about 116,000 Magic: The Gathering cards, with name search, filters and sorting.
+- **[Card search](https://shivan2418.github.io/zonemapdb-demo-scryfall/)** ([source](https://github.com/shivan2418/zonemapdb-demo-scryfall)): about 116,000 Magic: The Gathering cards, with name search, filters and sorting.
 - **[Address lookup](https://shivan2418.github.io/zonemapdb-demo-addresses/)** ([source](https://github.com/shivan2418/zonemapdb-demo-addresses)): about 160 million US addresses in 817 MB of compressed files. Looking up one address transfers about 0.17 MB.
 
 ## Why zonemapdb?
